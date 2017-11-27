@@ -1,0 +1,9 @@
+.*
+__pycache__
+!.gitignore
+/data
+/out
+/report
+/tmp
+/models
+/models_1996
