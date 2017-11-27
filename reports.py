@@ -123,8 +123,8 @@ def output_dataframe(dataframe, name=''):
 def main():
     models = create_models()
     inputs = {
-        # 'snp_1996': 'out/snp_1996.csv',
-        'snp_119': 'tmp/data_119.csv',
+        'snp_1996': 'tmp/train_1996.csv',
+        'snp_119': 'tmp/train_119.csv',
     }
     compare_models(models=models, inputs=inputs, report_dir='report')
 

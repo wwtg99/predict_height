@@ -56,6 +56,8 @@ def parse_gender(gender):
     :param gender:
     :return:
     """
+    if not gender:
+        return None
     gender = gender.lower()
     if gender == 'male' or gender == 'm':
         return 1

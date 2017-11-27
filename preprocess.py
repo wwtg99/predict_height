@@ -27,8 +27,7 @@ def process_genotypes(filepath, snp_maf, snp_list=None, **kwargs):
     """
     conf = dict({
         'genotype_label': False,
-        'skip_none_rs': True,
-        'fill_none': True
+        'skip_none_rs': True
     }, **kwargs)
     with open(filepath, encoding='utf-8') as fh:
         if conf['genotype_label']:
@@ -51,29 +50,22 @@ def genotype_with_label(fp, snp_maf, snp_list=None, **kwargs):
     """
     ss = {}
     for line in fp:
-        known_snp = False
         line = line.strip()
         if not line:
             continue
         cols = line.split('\t')  # accession rs allele1 allele2
         if len(cols) > 3:
             acc, rs, a1, a2 = cols[0:4]
-            # check snp list
-            if snp_list and rs not in snp_list:
-                continue
             # transform genotype
             if rs in snp_maf.index:
-                known_snp = True
                 gt = transform_genotype(snp_maf.loc[rs], a1, a2)
             else:
                 if kwargs['skip_none_rs']:
                     continue
                 gt = None
-            # fill missing rs with most frequent genotype
-            if (gt is None or np.isnan(gt)) and kwargs['fill_none'] and known_snp:
-                gt = get_most_freq_genotype(snp_maf.loc[rs])
-                if gt is None and kwargs['skip_none_rs']:
-                    continue
+            # check snp list
+            if snp_list and rs not in snp_list:
+                continue
             if rs in ss:
                 ss[rs][acc] = gt
             else:
@@ -94,29 +86,22 @@ def genotype_without_label(fp, snp_maf, snp_list=None, **kwargs):
     """
     ss = {}
     for line in fp:
-        known_snp = False
         line = line.strip()
         if not line:
             continue
         cols = line.split('\t')  # rs allele1 allele2
         if len(cols) > 2:
             rs, a1, a2 = cols[0:3]
-            # check snp list
-            if snp_list and rs not in snp_list:
-                continue
             # transform genotype
             if rs in snp_maf.index:
-                known_snp = True
                 gt = transform_genotype(snp_maf.loc[rs], a1, a2)
             else:
                 if kwargs['skip_none_rs']:
                     continue
                 gt = None
-            # fill missing rs with most frequent genotype
-            if (gt is None or np.isnan(gt)) and kwargs['fill_none'] and known_snp:
-                gt = get_most_freq_genotype(snp_maf.loc[rs])
-                if gt is None and kwargs['skip_none_rs']:
-                    continue
+            # check snp list
+            if snp_list and rs not in snp_list:
+                continue
             ss[rs] = gt
     return pd.DataFrame(ss, index=['genotype'])
 
