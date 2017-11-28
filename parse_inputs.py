@@ -76,6 +76,10 @@ def parse_snp_list(snp_list_type):
     """
     if snp_list_type == '1996':
         return snp_list_1996
+    elif snp_list_type == '43':
+        return snp_list_43
+    elif snp_list_type == '100':
+        return snp_list_100
     else:
         return snp_list_119
 
@@ -86,8 +90,13 @@ def init_args(arguments=None):
     parser.add_argument('-g', '--genotype', help='Genotype input file')
     parser.add_argument('-o', '--output', help='Output file')
     parser.add_argument('--gender', help='Specify gender for non-label specimen')
-    parser.add_argument('-l', '--genotype-label', help='Whether has genotype label', action='store_true', default=False)
-    parser.add_argument('--snp-list', help='Choose type of snp list', choices=['119', '1996'], default='119')
+    parser.add_argument('-l', '--genotype-label', help='Whether has genotype label', action='store_true')
+    parser.add_argument('--no-fill', help='Do not fill NA genotypes', action='store_true')
+    parser.add_argument('--no-drop', help='Do not drop rows or columns', action='store_true')
+    parser.add_argument('--drop-row-thresh', help='Drop row if number of NA greater than this threshold', type=int, default=30)
+    parser.add_argument('--drop-col-thresh', help='Drop column if number of NA greater than this threshold', type=int, default=50)
+    parser.add_argument('-v', '--verbose', help='Show more information', action='store_true')
+    parser.add_argument('--snp-list', help='Choose type of snp list', choices=['43', '100', '119', '1996'], default='119')
     args = parser.parse_args(arguments)
     if not args.genotype or not os.path.exists(args.genotype):
         print('Invalid genotype file')
@@ -100,8 +109,8 @@ def init_args(arguments=None):
 
 def process_one(args=None):
     snp_list = parse_snp_list(args.snp_list)
-    genotype = preprocess.get_genotypes(args.genotype, snp_list=snp_list, fill_genotype=True, genotype_label=False,
-                                        drop_snp=False)
+    genotype = preprocess.get_genotypes(args.genotype, snp_list=snp_list, fill_genotype=(not args.no_fill),
+                                        genotype_label=False, drop_snp=(not args.no_drop))
     gender = parse_gender(args.gender)
     genotype['height'] = 0
     genotype['gender'] = gender
@@ -109,16 +118,15 @@ def process_one(args=None):
         cols = ['height', 'gender'] + snp_list
         genotype = genotype.reindex(columns=cols)
     # save to file
-    n_sam, n_fea = genotype.shape
-    print("Samples: %d\tFeatures: %d" % (n_sam, n_fea))
-    print('Save to file %s' % args.output)
-    genotype.to_csv(args.output)
+    save_csv(genotype, args.output)
 
 
 def process_many(args=None):
     snp_list = parse_snp_list(args.snp_list)
-    genotype = preprocess.get_genotypes(args.genotype, snp_list=snp_list, fill_genotype=True, genotype_label=True,
-                                        drop_snp=True, drop_snp_row_thresh=50, drop_snp_col_thresh=50)
+    genotype = preprocess.get_genotypes(args.genotype, snp_list=snp_list, fill_genotype=(not args.no_fill),
+                                        genotype_label=True, drop_snp=(not args.no_drop),
+                                        drop_snp_row_thresh=args.drop_row_thresh,
+                                        drop_snp_col_thresh=args.drop_col_thresh)
     heights, genders, ages = load_specimen(args.specimen, min_height=100)
     spe = pd.DataFrame({'height': heights, 'gender': genders})
     df = pd.merge(spe, genotype, left_index=True, right_index=True)
@@ -126,21 +134,44 @@ def process_many(args=None):
         cols = ['height', 'gender'] + snp_list
         df = df.reindex(columns=cols)
     # save to file
-    n_sam, n_fea = df.shape
+    save_csv(df, args.output)
+
+
+def save_csv(dataframe, output):
+    """
+    Save DataFrame to csv file.
+
+    :param dataframe:
+    :param output:
+    :return:
+    """
+    n_sam, n_fea = dataframe.shape
     print("Samples: %d\tFeatures: %d" % (n_sam, n_fea))
-    print('Save to file %s' % args.output)
-    df.to_csv(args.output)
+    print('Save to file %s' % output)
+    dataframe.to_csv(output)
 
 
 def main(args=None):
     args = init_args(args)
     if args is None:
         return
+    if args.verbose:
+        print('Parse input file %s label.' % 'with' if args.genotype_label else 'without')
+        print('SNP number: %s' % args.snp_list)
+        print('Fill NA: %s' % ('False' if args.no_fill else 'True', ))
+        print('Drop rows or columns: %s' % ('False' if args.no_drop else 'True', ))
+        if not args.no_drop:
+            print('Drop row NA threshold: %d' % args.drop_row_thresh)
+            print('Drop column NA threshold: %d' % args.drop_col_thresh)
     if args.genotype_label:
         process_many(args)
     else:
         process_one(args)
 
+
+snp_list_43 = ['rs10513137','rs148833559','rs137852591','rs148934412','rs142036701','rs3751599','rs7815909','rs3816804','rs13273123','rs2871865','rs11082671','rs2066808','rs12612930','rs3809128','rs7678436','rs11021504','rs4369779','rs2271266','rs9825379','rs4146922','rs1776897','rs3791679','rs13131350','rs699371','rs806794','rs6763931','rs16895802','rs10460436','rs3817428','rs3769528','rs8098316','rs2145272','rs258324','rs1926872','rs6060369','rs2236164','rs11648796','rs2284746','rs11970475','rs10858250','rs7158300','rs174547','rs6823268']
+
+snp_list_100 = ['rs10513137','rs148833559','rs137852591','rs148934412','rs142036701','rs3751599','rs7815909','rs3816804','rs13273123','rs2871865','rs11082671','rs2066808','rs12612930','rs3809128','rs7678436','rs11021504','rs4369779','rs2271266','rs9825379','rs4146922','rs1776897','rs3791679','rs13131350','rs699371','rs806794','rs6763931','rs16895802','rs10460436','rs3817428','rs3769528','rs8098316','rs2145272','rs258324','rs1926872','rs6060369','rs2236164','rs11648796','rs2284746','rs11970475','rs10858250','rs7158300','rs174547','rs6823268','rs3738814','rs2270518','rs7513464','rs2011962','rs6845999','rs6030712','rs11170624','rs1890995','rs16848425','rs757608','rs1415701','rs2401171','rs7636293','rs3781426','rs3755206','rs234886','rs17152411','rs7588654','rs4243400','rs1865760','rs2454206','rs13072744','rs2062078','rs7708474','rs16950303','rs606452','rs1541777','rs3823418','rs1971762','rs12413361','rs11205277','rs3785574','rs10448080','rs4733789','rs6570507','rs10519302','rs2251830','rs7184046','rs12410416','rs7704138','rs1938679','rs6753739','rs12459943','rs2227901','rs11694842','rs3733309','rs4472734','rs611203','rs2573652','rs1042725','rs2093210','rs867529','rs6772112','rs537930','rs2510897','rs2166898','rs7153027']
 
 snp_list_119 = ['rs11082671', 'rs12612930', 'rs11021504', 'rs3816804', 'rs3751599', 'rs7678436', 'rs3791679',
                 'rs9825379', 'rs10513137', 'rs2284746', 'rs3738814', 'rs7513464', 'rs12410416', 'rs1926872',
