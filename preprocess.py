@@ -225,17 +225,21 @@ def get_genotypes(filepath, mafpath=None, snp_list=None, **kwargs):
     return gt
 
 
-def load_data(filepath):
+def load_data(filepath, gender=True):
     """
     Load CSV data from parse_inputs.py script output.
     x contains genotypes and gender
     y contains height
 
     :param filepath:
+    :param gender
     :return: x, y
     """
     data = pd.read_csv(filepath, index_col=0)
-    return split_genotype_height(data)
+    if gender:
+        return split_genotype_height(data)
+    else:
+        return split_genotype_height_without_gender(data)
 
 
 def split_genotype_height(data):
@@ -247,6 +251,21 @@ def split_genotype_height(data):
     """
     height = data[['height']]
     gt = data.drop('height', axis=1)
+    enc = OneHotEncoder(3)
+    x = enc.fit_transform(gt).toarray()
+    y = np.array(height['height'])
+    return x, y
+
+
+def split_genotype_height_without_gender(data):
+    """
+    Split DataFrame to height and genotypes without gender.
+
+    :param data:
+    :return:
+    """
+    height = data[['height']]
+    gt = data.drop('height', axis=1).drop('gender', axis=1)
     enc = OneHotEncoder(3)
     x = enc.fit_transform(gt).toarray()
     y = np.array(height['height'])

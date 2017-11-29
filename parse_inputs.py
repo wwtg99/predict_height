@@ -76,6 +76,16 @@ def parse_snp_list(snp_list_type):
     """
     if snp_list_type == '1996':
         return snp_list_1996
+    elif snp_list_type == '1':
+        return snp_list_1
+    elif snp_list_type == '5':
+        return snp_list_5
+    elif snp_list_type == '10':
+        return snp_list_10
+    elif snp_list_type == '15':
+        return snp_list_15
+    elif snp_list_type == '25':
+        return snp_list_25
     elif snp_list_type == '43':
         return snp_list_43
     elif snp_list_type == '100':
@@ -96,7 +106,7 @@ def init_args(arguments=None):
     parser.add_argument('--drop-row-thresh', help='Drop row if number of NA greater than this threshold', type=int, default=30)
     parser.add_argument('--drop-col-thresh', help='Drop column if number of NA greater than this threshold', type=int, default=50)
     parser.add_argument('-v', '--verbose', help='Show more information', action='store_true')
-    parser.add_argument('--snp-list', help='Choose type of snp list', choices=['43', '100', '119', '1996'], default='119')
+    parser.add_argument('--snp-list', help='Choose type of snp list', choices=['1', '5', '10', '15', '25', '43', '100', '119', '1996'], default='119')
     args = parser.parse_args(arguments)
     if not args.genotype or not os.path.exists(args.genotype):
         print('Invalid genotype file')
@@ -168,6 +178,16 @@ def main(args=None):
     else:
         process_one(args)
 
+
+snp_list_1 = ['rs10513137']
+
+snp_list_5 = ['rs10513137','rs148833559','rs137852591','rs148934412','rs142036701']
+
+snp_list_10 = ['rs10513137','rs148833559','rs137852591','rs148934412','rs142036701','rs3751599','rs7815909','rs3816804','rs13273123','rs2871865']
+
+snp_list_15 = ['rs10513137','rs148833559','rs137852591','rs148934412','rs142036701','rs3751599','rs7815909','rs3816804','rs13273123','rs2871865','rs11082671','rs2066808','rs12612930','rs3809128','rs7678436']
+
+snp_list_25 = ['rs10513137','rs148833559','rs137852591','rs148934412','rs142036701','rs3751599','rs7815909','rs3816804','rs13273123','rs2871865','rs11082671','rs2066808','rs12612930','rs3809128','rs7678436','rs11021504','rs4369779','rs2271266','rs9825379','rs4146922','rs1776897','rs3791679','rs13131350','rs699371','rs806794']
 
 snp_list_43 = ['rs10513137','rs148833559','rs137852591','rs148934412','rs142036701','rs3751599','rs7815909','rs3816804','rs13273123','rs2871865','rs11082671','rs2066808','rs12612930','rs3809128','rs7678436','rs11021504','rs4369779','rs2271266','rs9825379','rs4146922','rs1776897','rs3791679','rs13131350','rs699371','rs806794','rs6763931','rs16895802','rs10460436','rs3817428','rs3769528','rs8098316','rs2145272','rs258324','rs1926872','rs6060369','rs2236164','rs11648796','rs2284746','rs11970475','rs10858250','rs7158300','rs174547','rs6823268']
 
