@@ -38,14 +38,20 @@ def compare_models(models, inputs, report_dir, n_folds=6, loo=False):
     with open(report_dir + '/report.md', 'w') as fh:
         fh.write('# Model Comparison Report\n\n')
         for inp in inputs:
+            print('Start analyze %s' % inp)
             fp = inputs[inp]
+            print('Load data')
             x, y = preprocess.load_data(fp, True)  # 有性别
             xg, yg = preprocess.load_data(fp, False)  # 无性别
             n_samples, n_features = x.shape
-            cv_score_list, loo_score_list, loost_score_list = get_cross_validation_score(model_lists, x, y, n_folds)
-            cv_g_score_list, loo_g_score_list, loost_g_score_list = get_cross_validation_score(model_lists, xg, yg, n_folds)
+            print('Samples %d, Features %d' % (n_samples, n_features))
+            print('Start cross validation')
+            cv_score_list, loo_score_list, loost_score_list = get_cross_validation_score(model_lists, x, y, n_folds, loo)
+            cv_g_score_list, loo_g_score_list, loost_g_score_list = get_cross_validation_score(model_lists, xg, yg, n_folds, loo)
+            print('Start predict')
             pre_y_list = get_predicted(model_lists, x, y)
             pre_y_g_list = get_predicted(model_lists, xg, yg)
+            print('Calculate metrics')
             model_metrics_list = get_model_metrics(model_names, y, pre_y_list)
             model_metrics_g_list = get_model_metrics(model_names, yg, pre_y_g_list)
             # 建立数据框
@@ -62,37 +68,52 @@ def compare_models(models, inputs, report_dir, n_folds=6, loo=False):
             df_me = pd.DataFrame(model_metrics_list, index=model_names, columns=metrics_columns)
             df_me_g = pd.DataFrame(model_metrics_g_list, index=model_names, columns=metrics_columns)
             # 输出图像
-            plot_real_y_hist(report_dir, inp, y)
-            plot_predict_comparison(report_dir, inp, model_names, y, pre_y_list)
-            plot_cross_val(report_dir, inp, model_names, df_cv, n_folds, loo, loo_score_list, df_loo)
-            plot_cross_val(report_dir, inp, model_names, df_cv_g, n_folds, loo, loo_g_score_list, df_loo_g)
-            plot_metrics(report_dir, inp, model_names, df_me)
-            plot_metrics(report_dir, inp, model_names, df_me_g)
+            print('Plot images %s' % inp)
+            img_real_dis = plot_real_y_hist(report_dir, inp, y, pd.read_csv(fp, index_col=0))
+            img_comp = plot_predict_comparison(report_dir, inp + '_with_gender', model_names, y, pre_y_list)
+            img_comp_g = plot_predict_comparison(report_dir, inp + '_without_gender', model_names, yg, pre_y_g_list)
+            img_k_folds, img_loo_dis, img_loo_mae = plot_cross_val(report_dir, inp + '_with_gender', model_names, df_cv, n_folds, loo, loo_score_list, df_loo)
+            img_k_folds_g, img_loo_dis_g, img_loo_mae_g = plot_cross_val(report_dir, inp + '_without_gender', model_names, df_cv_g, n_folds, loo, loo_g_score_list, df_loo_g)
+            img_me = plot_metrics(report_dir, inp + '_with_gender', model_names, df_me)
+            img_me_g = plot_metrics(report_dir, inp + '_without_gender', model_names, df_me_g)
             plt.close('all')
             # 输出报告
+            print('Output to report %s' % inp)
             fh.write('## Input %s\n\n' % inp)
             fh.write('samples: %d \t features: %d (%d genotypes and gender)\n\n'
                      % (n_samples, n_features / 3, n_features / 3 - 1))
+            fh.write('### Sample distribution\n\n')
+            fh.write('![real distribution](%s)\n\n' % img_real_dis)
+            fh.write('![real predict comparison with gender](%s)\n\n' % img_comp)
+            fh.write('![real predict comparison without gender](%s)\n\n' % img_comp_g)
             fh.write('### Cross validation result\n\n')
             fh.write('#### %d-folds CV MAE with gender\n\n' % n_folds)
             fh.write(output_dataframe(df_cv, 'Model'))
             fh.write('\n\n')
+            fh.write('![k-folds mae with gender](%s)\n\n' % img_k_folds)
             fh.write('#### %d-folds CV MAE without gender\n\n' % n_folds)
             fh.write(output_dataframe(df_cv_g, 'Model'))
             fh.write('\n\n')
+            fh.write('![k-folds mae without gender](%s)\n\n' % img_k_folds_g)
             if loo:
                 fh.write('#### LOO MAE with gender\n\n')
                 fh.write(output_dataframe(df_loo, 'Model'))
                 fh.write('\n\n')
+                fh.write('![loo mae with gender](%s)\n\n' % img_loo_mae)
+                fh.write('![loo distribution with gender](%s)\n\n' % img_loo_dis)
                 fh.write('#### LOO MAE without gender\n\n')
                 fh.write(output_dataframe(df_loo_g, 'Model'))
                 fh.write('\n\n')
+                fh.write('![loo mae without gender](%s)\n\n' % img_loo_mae_g)
+                fh.write('![loo distribution without gender](%s)\n\n' % img_loo_dis_g)
             fh.write('### Regression metrics with gender\n\n')
             fh.write(output_dataframe(df_me, 'Model'))
             fh.write('\n\n')
+            fh.write('![metrics with gender](%s)\n\n' % img_me)
             fh.write('### Regression metrics without gender\n\n')
             fh.write(output_dataframe(df_me_g, 'Model'))
             fh.write('\n\n')
+            fh.write('![metrics without gender](%s)\n\n' % img_me_g)
         # 报告通用信息
         fh.write('## Remark\n\n')
         fh.write('short name | full name\n')
@@ -180,20 +201,34 @@ def get_predicted(model_lists, x, y):
     return pre_y_list
 
 
-def plot_real_y_hist(img_dir, name, y):
+def plot_real_y_hist(img_dir, name, y, dataframe):
     """
     真实身高直方图
 
     :param img_dir:
     :param name:
     :param y:
+    :param dataframe
     :return:
     """
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 12))
+    plt.subplot(211)
     plt.hist(y, bins=40)
     plt.title('Real Height')
     plt.xlabel('Height(cm)')
-    plt.savefig(img_dir + '/fig_real_height_%s' % name)
+    plt.ylabel('Amount')
+    plt.subplot(212)
+    total = dataframe['height']
+    male = dataframe[dataframe['gender'] == 1]['height']
+    female = dataframe[dataframe['gender'] == 0]['height']
+    df = pd.DataFrame({'Male': male, 'Female': female, 'Total': total})
+    df.boxplot()
+    plt.title('Real height by gender')
+    plt.ylabel('Height(cm)')
+    plt.subplots_adjust(hspace=0.3)
+    imgname = 'fig_real_height_%s.jpg' % name
+    plt.savefig(img_dir + '/' + imgname)
+    return imgname
 
 
 def plot_predict_comparison(img_dir, name, model_names, y, pre_y_list):
@@ -216,7 +251,9 @@ def plot_predict_comparison(img_dir, name, model_names, y, pre_y_list):
     plt.legend(loc='upper right')
     plt.xlabel('real height')
     plt.ylabel('predicted height')
-    plt.savefig(img_dir + '/fig_comp_%s.jpg' % name)
+    imgname = 'fig_comp_%s.jpg' % name
+    plt.savefig(img_dir + '/' + imgname)
+    return imgname
 
 
 def plot_cross_val(img_dir, name, model_names, df_cv, n_folds, loo=False, loo_score_list=None, df_loo=None):
@@ -241,29 +278,38 @@ def plot_cross_val(img_dir, name, model_names, df_cv, n_folds, loo=False, loo_sc
     plt.legend(loc='lower right')
     plt.ylim(0, 10)
     plt.ylabel('MAE')
-    plt.savefig(img_dir + '/fig_k_folds_cv_%s.jpg' % name)
+    imgname1 = 'fig_k_folds_cv_%s.jpg' % name
+    plt.savefig(img_dir + '/' + imgname1)
     # LOO score 分布
+    imgname2 = None
+    imgname3 = None
     if loo:
+        # LOO MAE 分布
         plt.figure(figsize=(12, 6))
-        maxcol = math.ceil(len(model_names) / 3.0)
+        maxrow = math.ceil(len(model_names) / 3.0)
         for i in range(len(model_names)):
-            plt.subplot(3, maxcol, i + 1)
+            plt.subplot(maxrow, 3, i + 1)
             plt.hist(loo_score_list[i], bins=40)
             plt.title(model_names[i])
             plt.xlim(0, 20)
             plt.ylabel('MAE')
         plt.subplots_adjust(wspace=0.2, hspace=0.4)
-        plt.savefig(img_dir + '/fig_loo_dis_%s.jpg' % name)
+        imgname2 = 'fig_loo_dis_%s.jpg' % name
+        plt.savefig(img_dir + '/' + imgname2)
+        # LOO MAE 概率密度
         plt.figure(figsize=(12, 6))
-        plt.bar(np.arange(len(model_names)), df_loo['Mean MAE'], label='Mean MAE for LOO')
+        x1 = np.arange(0, 20)
         for i in range(len(model_names)):
-            v = df_loo['Mean MAE'][i]
-            plt.text(i, v + 0.05, '%.4f' % v, ha='center', va='bottom', fontsize=7)
-        plt.xticks(np.arange(len(model_names)), model_names, rotation=45)
-        plt.title('Mean absolute error for LOO %s' % name)
-        plt.ylim(0, 8)
-        plt.ylabel('mean absolute error')
-        plt.savefig(img_dir + '/fig_loo_mae_%s.jpg' % name)
+            plt.subplot(maxrow, 3, i + 1)
+            y1 = normfun(x1, df_loo['Mean MAE'][i], np.sqrt(df_loo['Var MAE'][i]))
+            plt.plot(x1, y1)
+            plt.title(model_names[i])
+            plt.xlabel('MAE')
+            plt.ylabel('Probability')
+        plt.subplots_adjust(wspace=0.2, hspace=0.4)
+        imgname3 = 'fig_loo_norm_%s.jpg' % name
+        plt.savefig(img_dir + '/' + imgname3)
+    return imgname1, imgname2, imgname3
 
 
 def plot_metrics(img_dir, name, model_names, df_metrics):
@@ -294,23 +340,38 @@ def plot_metrics(img_dir, name, model_names, df_metrics):
     plt.title('R2 for %s' % name)
     plt.ylabel('R2')
     plt.subplots_adjust(bottom=0.2)
-    plt.savefig(img_dir + '/fig_metrics_%s.jpg' % name)
+    imgname = 'fig_metrics_%s.jpg' % name
+    plt.savefig(img_dir + '/' + imgname)
+    return imgname
+
+
+def normfun(x, mu, sigma):
+    """
+    计算正态分布概率密度
+
+    :param x:
+    :param mu:
+    :param sigma:
+    :return:
+    """
+    pdf = np.exp(-((x - mu)**2) / (2 * sigma**2)) / (sigma * np.sqrt(2*np.pi))
+    return pdf
 
 
 def main():
     models = create_models()
     inputs = {
-        # 'snp_1996': 'tmp/train_1996.csv',
+        'snp_1996': 'tmp/train_1996.csv',
         'snp_119': 'tmp/train_119.csv',
-        'snp_100': 'tmp/train_100.csv',
+        # 'snp_100': 'tmp/train_100.csv',
         'snp_43': 'tmp/train_43.csv',
-        # 'snp_25': 'tmp/train_25.csv',
+        'snp_25': 'tmp/train_25.csv',
         # 'snp_15': 'tmp/train_15.csv',
         'snp_10': 'tmp/train_10.csv',
         # 'snp_5': 'tmp/train_5.csv',
         'snp_1': 'tmp/train_1.csv',
     }
-    compare_models(models=models, inputs=inputs, report_dir='report', n_folds=10)
+    compare_models(models=models, inputs=inputs, report_dir='report', n_folds=10, loo=False)
 
 
 if __name__ == '__main__':
