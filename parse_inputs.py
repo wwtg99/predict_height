@@ -4,6 +4,7 @@ import datetime
 import argparse
 import os
 import preprocess
+import sn
 
 
 def load_specimen(filepath, min_height=None, min_age=None):
@@ -107,6 +108,7 @@ def init_args(arguments=None):
     parser.add_argument('--drop-col-thresh', help='Drop column if number of NA greater than this threshold', type=int, default=50)
     parser.add_argument('-v', '--verbose', help='Show more information', action='store_true')
     parser.add_argument('--snp-list', help='Choose type of snp list', choices=['1', '5', '10', '15', '25', '43', '100', '119', '1996'], default='119')
+    parser.add_argument('-e', '--source', help='Input file source', choices=['none', '23andme', '23andme-exome-vcf', 'ftdna-illumina', 'decodeme', 'vcf', 'ftdna'], default='none')
     args = parser.parse_args(arguments)
     if not args.genotype or not os.path.exists(args.genotype):
         print('Invalid genotype file')
@@ -118,10 +120,15 @@ def init_args(arguments=None):
 
 
 def process_one(args=None):
+    if args.source != 'none':
+        args.genotype = preprocess_genotype_tsv(args.genotype, args.source, args.output + '.%s.tsv' % args.source)
     snp_list = parse_snp_list(args.snp_list)
     genotype = preprocess.get_genotypes(args.genotype, snp_list=snp_list, fill_genotype=(not args.no_fill),
                                         genotype_label=False, drop_snp=(not args.no_drop))
     gender = parse_gender(args.gender)
+    if gender is None:
+        print('Must specify --gender for non-lable mode!')
+        return
     genotype['height'] = 0
     genotype['gender'] = gender
     if snp_list:
@@ -145,6 +152,41 @@ def process_many(args=None):
         df = df.reindex(columns=cols)
     # save to file
     save_csv(df, args.output)
+
+
+def preprocess_genotype_tsv(input, source, output):
+    """
+    Preprocess input files from other source.
+
+    :param input:
+    :param source:
+    :param output:
+    :return:
+    """
+    snps = sn.parse(input, source)
+    with open(output, 'w') as fh:
+        for s in snps:
+            rs = s.name
+            if rs[0:2] != 'rs':
+                continue
+            ref, alt = split_genotype(s.genotype)
+            if alt is None:
+                continue
+            fh.write('\t'.join([rs, ref, alt]) + '\n')
+    return output
+
+
+def split_genotype(genotype):
+    """
+    Split genotype to rel and alt.
+
+    :param genotype:
+    :return:
+    """
+    if len(genotype) == 2:
+        return genotype[0], genotype[1]
+    else:
+        return genotype, None
 
 
 def save_csv(dataframe, output):
