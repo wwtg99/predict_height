@@ -293,7 +293,7 @@ def plot_cross_val(img_dir, name, model_names, df_cv, n_folds, loo=False, loo_sc
             plt.title(model_names[i])
             plt.xlim(0, 20)
             plt.ylabel('MAE')
-        plt.subplots_adjust(wspace=0.2, hspace=0.4)
+        plt.subplots_adjust(wspace=0.4, hspace=0.4)
         imgname2 = 'fig_loo_dis_%s.jpg' % name
         plt.savefig(img_dir + '/' + imgname2)
         # LOO MAE 概率密度
@@ -306,7 +306,7 @@ def plot_cross_val(img_dir, name, model_names, df_cv, n_folds, loo=False, loo_sc
             plt.title(model_names[i])
             plt.xlabel('MAE')
             plt.ylabel('Probability')
-        plt.subplots_adjust(wspace=0.2, hspace=0.4)
+        plt.subplots_adjust(wspace=0.4, hspace=0.4)
         imgname3 = 'fig_loo_norm_%s.jpg' % name
         plt.savefig(img_dir + '/' + imgname3)
     return imgname1, imgname2, imgname3
@@ -361,7 +361,7 @@ def normfun(x, mu, sigma):
 def main():
     models = create_models()
     inputs = {
-        'snp_1996': 'tmp/train_1996.csv',
+        # 'snp_1996': 'tmp/train_1996.csv',
         'snp_119': 'tmp/train_119.csv',
         # 'snp_100': 'tmp/train_100.csv',
         'snp_43': 'tmp/train_43.csv',
