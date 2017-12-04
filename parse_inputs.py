@@ -109,6 +109,7 @@ def init_args(arguments=None):
     parser.add_argument('-v', '--verbose', help='Show more information', action='store_true')
     parser.add_argument('--snp-list', help='Choose type of snp list', choices=['1', '5', '10', '15', '25', '43', '100', '119', '1996'], default='119')
     parser.add_argument('-e', '--source', help='Input file source', choices=['none', '23andme', '23andme-exome-vcf', 'ftdna-illumina', 'decodeme', 'vcf', 'ftdna'], default='none')
+    parser.add_argument('--min-snp', help='Min SNP number for non-labeled mode.', type=int)
     args = parser.parse_args(arguments)
     if not args.genotype or not os.path.exists(args.genotype):
         print('Invalid genotype file')
@@ -124,7 +125,7 @@ def process_one(args=None):
         args.genotype = preprocess_genotype_tsv(args.genotype, args.source, args.output + '.%s.tsv' % args.source)
     snp_list = parse_snp_list(args.snp_list)
     genotype = preprocess.get_genotypes(args.genotype, snp_list=snp_list, fill_genotype=(not args.no_fill),
-                                        genotype_label=False, drop_snp=(not args.no_drop))
+                                        genotype_label=False, drop_snp=(not args.no_drop), min_snp=args.min_snp)
     gender = parse_gender(args.gender)
     if gender is None:
         print('Must specify --gender for non-lable mode!')

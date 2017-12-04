@@ -216,6 +216,10 @@ def get_genotypes(filepath, mafpath=None, snp_list=None, **kwargs):
         mafpath = os.path.split(os.path.realpath(__file__))[0] + '/lib/maf.csv'
     maf = load_mafs(mafpath)
     gt = process_genotypes(filepath, snp_maf=maf, snp_list=snp_list, **kwargs)
+    if snp_list and 'min_snp' in kwargs:
+        minsnp = int(kwargs['min_snp'])
+        if len(gt.columns) < minsnp:
+            raise Exception('SNP number (%d) is not enough' % len(gt.columns))
     if 'drop_snp' in kwargs and kwargs['drop_snp']:
         rt = kwargs['drop_snp_row_thresh'] if 'drop_snp_row_thresh' in kwargs else None
         ct = kwargs['drop_snp_col_thresh'] if 'drop_snp_col_thresh' in kwargs else None
